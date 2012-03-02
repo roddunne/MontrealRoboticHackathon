@@ -1,0 +1,198 @@
+
+/* BUZZER */
+
+int buzzPin =  3;    //Connect Buzzer on Digital Pin3
+
+void setup()  
+
+{        
+  pinMode(buzzPin, OUTPUT);     
+}
+
+void loop()                     
+{
+  digitalWrite(buzzPin, HIGH);
+  delay(1);
+  digitalWrite(buzzPin, LOW); 
+  delay(1);        
+}
+
+
+/// WHITE LED
+
+///Arduino Sample Code for DFR0021
+///www.DFRobot.com
+///Last modified on 16th September 2010
+
+int led = 3;
+ 
+void setup()
+{
+  pinMode(led, OUTPUT);     //Set Pin3 as output
+}
+void loop()
+{
+          digitalWrite(Relay, HIGH);   //Turn off led
+          delay(2000);
+          digitalWrite(Relay, LOW);    //Turn on led
+          delay(2000);
+}
+
+
+
+/// VIBRATION
+
+
+#define SensorLED     13
+#define SensorINPUT   3  //Connect the sensor to digital Pin 3 which is Interrupts 1.
+
+unsigned char state = 0;
+
+void setup() 
+{ 
+  pinMode(SensorLED, OUTPUT); 
+  pinMode(SensorINPUT, INPUT);
+  attachInterrupt(1, blink, FALLING);// Trigger the blink function when the falling edge is detected
+
+}
+void loop()
+{
+      if(state!=0)
+      {
+        state = 0;
+        digitalWrite(SensorLED,HIGH);
+        delay(500);
+      }  
+      else 
+        digitalWrite(SensorLED,LOW);
+} 
+
+
+void blink()//Interrupts function
+{
+  state++;
+}
+
+/// TILT SENSOR
+
+int ledPin = 13;                // Connect LED to pin 13
+int switcher = 3;                 // Connect Tilt sensor to Pin3
+
+void setup()
+{
+  pinMode(ledPin, OUTPUT);      // Set digital pin 13 to output mode
+  pinMode(switcher, INPUT);       // Set digital pin 3 to input mode
+}
+void loop()
+{
+    
+   if(digitalRead(switcher)==HIGH) //Read sensor value
+     { 
+        digitalWrite(ledPin, HIGH);   // Turn on LED when the sensor is tilted
+     }
+   else
+     {
+        digitalWrite(ledPin, LOW);    // Turn off LED when the sensor is not triggered
+     }
+}
+
+
+
+///SOUND SENSOR
+
+void setup()
+{
+  Serial.begin(9600); // open serial port, set the baud rate to 9600 bps
+}
+void loop()
+{
+      int val;
+      val=analogRead(0);   //connect mic sensor to Analog 0
+      Serial.println(val,DEC);//print the sound value to serial        
+      delay(100);
+}
+
+
+/// LIGHT SENSOR ????
+
+void setup()
+{
+  Serial.begin(9600); // open serial port, set the baud rate to 9600 bps
+}
+void loop()
+{
+      int val;
+      val=analogRead(0);   //connect grayscale sensor to Analog 0
+      Serial.println(val,DEC);//print the value to serial        
+      delay(100);
+}
+
+
+/// TMEPERATURE SENSOR ????
+
+void setup()
+{
+    Serial.begin(9600);//Set Baud Rate to 9600 bps
+}
+
+void loop()
+{ 
+    int val;
+    int dat;
+    val=analogRead(0);//Connect LM35 on Analog 0
+    dat=(500*val)>>10;
+    Serial.print("Tep:"); //Display the temperature on Serial monitor
+    Serial.print(dat);
+    Serial.println("C");
+    delay(500);
+}
+
+
+
+/// BLUETOOTH SAMPOLE
+
+Bluetooth in action
+Plug the extension board on your Arduino, and plug the Bluetooth module on the extension board. The operation is simple and straightforward. No soldering involved. The module will replace the USB wired connection that you have between your PC and your Arduino. 
+       
+At the sketch level, using Bluetooth is extremely easy, you will use a serial connection, Serial.read to read from your PC or other device, and Serial.print to send data from the Arduino.
+        
+
+void setup()
+{
+  Serial.begin(115200);              // start serial communication for Bluetooth
+}
+ 
+void loop() {
+  if( Serial.available() )           // if data is available to read
+  {  
+     val = Serial.read();            // read it and store it in 'val'
+     Serial.println("Data received") // Send info back
+  }
+}
+
+
+/// SHARP RANGE SENSOR ???
+
+//  Noah Stahl
+//  5/25/2011
+//  http://arduinomega.blogspot.com
+//  Arduino Mega 2560
+//This sketch is used to test the Sharp Long Range Infrared Sensor.
+//The sensor output is attached to analog pin 15. Once the distance
+//is calculated, it is printed out to the serial monitor.
+
+#define sensorIR 15               //Must be an analog pin
+float sensorValue, inches, cm;    //Must be of type float for pow()
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  sensorValue = analogRead(sensorIR);
+  inches = 4192.936 * pow(sensorValue,-0.935) - 3.937;
+  //cm = 10650.08 * pow(sensorValue,-0.935) - 10;
+  delay(100);
+  Serial.print("Inches: ");
+  Serial.println(inches);
+}

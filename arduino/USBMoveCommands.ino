@@ -7,7 +7,7 @@ void setup(void)
 int i;
 for(i=5;i<=8;i++)
 pinMode(i, OUTPUT);
-Serial.begin(9600);
+Serial.begin(115200);
 }
 void loop(void)
 {

@@ -1,15 +1,27 @@
 
 rs232 = require("luars232")
 
--- Linux
+local err = io.stderr
+
+-- API key for uploading to cloud
+local APIKEY='22DDB1CB2F8B4486'
+
+-- Serial port name
 --port_name = '/dev/tty.usbmodemfa131'
-port_name = '/dev/tty.usbserial-A4016T68'
+--port_name = '/dev/tty.usbserial-A4016T68'
+port_name = '/dev/tty.Bluetooth_V3-DevB-1'
 
--- (Open)BSD
--- port_name = "/dev/cua00"
+-- Local copy of sensor values (1-8)
+local sensors = { 'chicken', 'veal' }
 
--- Windows
--- port_name = "COM1"
+-- Uploads sensor values to cloud
+local function upload()
+	local data = 'key=' .. APIKEY
+	for i, v in ipairs(sensors) do
+		data = data .. '&field' .. i .. '=' .. v
+	end
+	os.execute('curl -d "' .. data .. '" http://bots.myrobots.com/update')
+end
 
 -- ANSI C (and therefore Lua) has no built-in sleep function
 -- so make one here
@@ -19,13 +31,11 @@ function sleep(n)  -- seconds
   while clock() - t0 <= n do end
 end
 
-local out = io.stderr
-
 -- open port
 local e, p = rs232.open(port_name)
 if e ~= rs232.RS232_ERR_NOERROR then
 	-- handle error
-	out:write(string.format("can't open serial port '%s', error: '%s'\n",
+	err:write(string.format("can't open serial port '%s', error: '%s'\n",
 			port_name, rs232.error_tostring(e)))
 	return
 end
@@ -36,15 +46,18 @@ assert(p:set_data_bits(rs232.RS232_DATA_8) == rs232.RS232_ERR_NOERROR)
 assert(p:set_parity(rs232.RS232_PARITY_NONE) == rs232.RS232_ERR_NOERROR)
 assert(p:set_stop_bits(rs232.RS232_STOP_1) == rs232.RS232_ERR_NOERROR)
 assert(p:set_flow_control(rs232.RS232_FLOW_OFF)  == rs232.RS232_ERR_NOERROR)
+-- flow values: RS232_FLOW_OFF RS232_FLOW_XON_XOFF RS232_FLOW_HW
 
-out:write(string.format("OK, port open with values '%s'\n", tostring(p)))
+err:write(string.format("OK, port open with values '%s'\n", tostring(p)))
 
 local time = os.time()
 local cmd = 'a'
 
+upload()
+
 -- seems like our robot doesn't obey in the first few seconds?
 sleep(3)
-p:write('s')
+p:write('w')
 
 while true do
 	-- listen to what the robot says

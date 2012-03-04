@@ -15,7 +15,7 @@ port_name = '/dev/tty.usbserial-A4016T68'
 local sensors = {}
 
 -- Map of command names to raw character commands the Arduino sketch expects
-local command_map = { stop=' ', forward='w', backward='s', left='a', right='a'}
+local command_map = { stop=' ', forward='w', backward='s', left='a', right='d'}
 
 -- Manage upload times
 local upload_rate = 30

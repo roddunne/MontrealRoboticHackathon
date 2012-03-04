@@ -3,13 +3,28 @@ rs232 = require("luars232")
 
 local err = io.stderr
 
+--[[
+flame_sensor=1234
+temperature_sensor=1234
+tilt_sensor
+vibration_sensor
+sound_sensor
+front_ir_sensor
+rear_ir_sensor
+
+sensor flame 1234
+output moving
+sensor temp 666
+output happy
+--]]
+
 -- API key for uploading to cloud
 local APIKEY='22DDB1CB2F8B4486'
 
 -- Serial port name
 --port_name = '/dev/tty.usbmodemfa131'
---port_name = '/dev/tty.usbserial-A4016T68'
-port_name = '/dev/tty.Bluetooth_V3-DevB-1'
+port_name = '/dev/tty.usbserial-A4016T68'
+--port_name = '/dev/tty.Bluetooth_V3-DevB-1'
 
 -- Local copy of sensor values (1-8)
 local sensors = { 'chicken', 'veal' }
@@ -21,6 +36,10 @@ local function upload()
 		data = data .. '&field' .. i .. '=' .. v
 	end
 	os.execute('curl -d "' .. data .. '" http://bots.myrobots.com/update')
+end
+
+local function process_line(line)
+	print('LINE', '*' .. line .. '*')
 end
 
 -- ANSI C (and therefore Lua) has no built-in sleep function
@@ -53,24 +72,33 @@ err:write(string.format("OK, port open with values '%s'\n", tostring(p)))
 local time = os.time()
 local cmd = 'a'
 
-upload()
+--upload()
 
 -- seems like our robot doesn't obey in the first few seconds?
-sleep(3)
-p:write('w')
+--sleep(3)
+--p:write('w')
+
+-- any incomplete data we might have read
+local incomplete_line = ''
 
 while true do
 	-- listen to what the robot says
 	while true do
-		-- read with timeout
-		local read_len = 1 -- read one byte
-		local timeout = 100 -- in miliseconds
-		local e, data_read, size = p:read(read_len, timeout)
+		-- read 256 bytes with 100ms timeout
+		local e, data_read, size = p:read(256, 100)
 		assert(e == rs232.RS232_ERR_NOERROR)
 		if data_read then
-			io.write(data_read)
-			io.flush()
+			while true do
+				local i = data_read:find('\r\n')
+				if not i then break end
+				local line = incomplete_line .. data_read:sub(1, i-1)
+				process_line(line)
+				incomplete_line = ''
+				data_read = data_read:sub(i+2)
+			end
+			incomplete_line = data_read
 		else
+			-- no more data available right now
 			break;
 		end
 	end

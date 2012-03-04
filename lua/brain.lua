@@ -3,21 +3,6 @@ rs232 = require("luars232")
 
 local err = io.stderr
 
---[[
-flame_sensor=1234
-temperature_sensor=1234
-tilt_sensor
-vibration_sensor
-sound_sensor
-front_ir_sensor
-rear_ir_sensor
-
-sensor flame 1234
-output moving
-sensor temp 666
-output happy
---]]
-
 -- API key for uploading to cloud
 local APIKEY='22DDB1CB2F8B4486'
 
@@ -26,20 +11,31 @@ local APIKEY='22DDB1CB2F8B4486'
 port_name = '/dev/tty.usbserial-A4016T68'
 --port_name = '/dev/tty.Bluetooth_V3-DevB-1'
 
--- Local copy of sensor values (1-8)
-local sensors = { 'chicken', 'veal' }
+-- Local copy of sensor values (by name)
+local sensors = {}
+
+-- Manage upload times
+local upload_rate = 30
+local upload_time = os.time() + upload_rate
 
 -- Uploads sensor values to cloud
 local function upload()
-	local data = 'key=' .. APIKEY
-	for i, v in ipairs(sensors) do
-		data = data .. '&field' .. i .. '=' .. v
-	end
+	local data = string.format('key=%s&field1=%s&field2=%s&field3=%s&field4=%s&field5=%s&field6=%s&field7=%s&field8=%s',
+		APIKEY,
+		sensors.light or '', sensors.temperature or '',
+		sensors.flame or '', sensors.sound or '',
+		sensors.front_ir or '', sensors.rear_ir or '',
+		sensors.vibration or '', sensors.tilt or '')
+	print('uploading:', data)
 	os.execute('curl -d "' .. data .. '" http://bots.myrobots.com/update')
 end
 
+-- Process a line with no newlines
 local function process_line(line)
-	print('LINE', '*' .. line .. '*')
+	local token, name, value = line:match('(%w+) (%w+) (%w+)')
+	if token == 'sensor' then
+		sensors[name] = value
+	end
 end
 
 -- ANSI C (and therefore Lua) has no built-in sleep function
@@ -88,6 +84,7 @@ while true do
 		local e, data_read, size = p:read(256, 100)
 		assert(e == rs232.RS232_ERR_NOERROR)
 		if data_read then
+			-- process data a line at a time
 			while true do
 				local i = data_read:find('\r\n')
 				if not i then break end
@@ -96,6 +93,7 @@ while true do
 				incomplete_line = ''
 				data_read = data_read:sub(i+2)
 			end
+			assert(data_read)
 			incomplete_line = data_read
 		else
 			-- no more data available right now
@@ -103,13 +101,10 @@ while true do
 		end
 	end
 
-	-- tell the robot to do something
-	if time < os.time() then
-	    -- send command
-	    --print('COMMANDING', cmd)
-	    --p:write(cmd)
-	    --cmd = cmd == 'a' and 'd' or 'a'
-	    --time = os.time()
+	-- upload
+	if upload_time <= os.time() then
+	    upload()
+	    upload_time = os.time() + upload_rate
 	end
 end
 

@@ -5,6 +5,6 @@ function love.keypressed(key)
 	if not cmd then return end
 	print(cmd)
 	local file = io.open('../lua/RobotControl.json', 'w')
-	file:write(string.format('{"cmd":"%s"}', cmd))
+	file:write(string.format('{"cmd":"%s"}\n', cmd))
 	file:close()
 end

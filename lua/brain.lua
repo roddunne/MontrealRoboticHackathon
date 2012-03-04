@@ -14,6 +14,9 @@ port_name = '/dev/tty.usbserial-A4016T68'
 -- Local copy of sensor values (by name)
 local sensors = {}
 
+-- Map of command names to raw character commands the Arduino sketch expects
+local command_map = { stop=' ', forward='w', backward='s', left='a', right='a'}
+
 -- Manage upload times
 local upload_rate = 30
 local upload_time = os.time() + upload_rate
@@ -40,12 +43,17 @@ local function process_line(line)
 	end
 end
 
--- ANSI C (and therefore Lua) has no built-in sleep function
--- so make one here
-local clock = os.clock
-function sleep(n)  -- seconds
-  local t0 = clock()
-  while clock() - t0 <= n do end
+-- Get a remote command
+local function get_remote_command()
+	--os.execute('curl --silent http://192.168.0.111/RobotCommand.json -o RobotCommand.json')
+	local file = io.open('RobotControl.json', 'r')
+	local json = file:read('*all')
+	file:close()
+	local cmd = json:match('%s*{%s*"%w+"%s*:%s*"(%w+)"%s*}%s*')
+	if not cmd then
+	    cmd = json:match("%s*{%s*'%w+'%s*:%s*'(%w+)'%s*}%s*")
+	end
+	return cmd
 end
 
 -- open port
@@ -70,17 +78,13 @@ err:write(string.format("OK, port open with values '%s'\n", tostring(p)))
 local time = os.time()
 local cmd = 'a'
 
---upload()
-
--- seems like our robot doesn't obey in the first few seconds?
---sleep(3)
---p:write('w')
-
 -- any incomplete data we might have read
 local incomplete_line = ''
 
+local latest_cmd = 'stop'
+
 while true do
-	-- listen to what the robot says
+	-- get sensor values
 	while true do
 		-- read 256 bytes with 100ms timeout
 		local e, data_read, size = p:read(256, 100)
@@ -101,6 +105,18 @@ while true do
 			-- no more data available right now
 			break;
 		end
+	end
+
+	-- control
+	local cmd = get_remote_command()
+	if latest_cmd ~= cmd then
+		-- send command to robot
+		print('COMMAND', cmd, command_map[cmd])
+		local raw_cmd = command_map[cmd]
+		if raw_cmd then
+			p:write(raw_cmd)
+		end
+		latest_cmd = cmd
 	end
 
 	-- upload

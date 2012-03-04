@@ -1,7 +1,16 @@
-#define FRONT_IR_SENSOR_PIN  2 // Must be an analog pin
-#define REAR_IR_SENSOR_PIN 1  // Must be an analog pin
+#define FRONT_IR_SENSOR_PIN  3 // Must be an analog pin
+#define REAR_IR_SENSOR_PIN 2  // Must be an analog pin
 
-int DEBUG_DUMP = 1;
+#define FLAME_SENSOR_PIN 4 
+#define SOUND_SENSOR_PIN 5
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+#define TILT_SENSOR_PIN 4 // Digital
+#define VIBRATION_SENSOR_PIN 2 // Digital
+
+#define BUZZER_PIN 3  // Must be an digital pin
+
+
+int DEBUG_DUMP = 0;
 
 int nRearSafetyThreshold = 100; // When the rover approaches the edge the signal falls from 400 to less than 100.
 int nfrontSafetyThreshold = 100; // When the rover approaches the edge the signal falls from 400 to less than 100.
@@ -23,9 +32,28 @@ int nMovementState_ = STOPPED;
 boolean bSafeToReverse_ = false;
 boolean bSafeToGoForward_ = false;
 
+// SENSOR PUBLISHING
+int nIterationsSinceLastPost_ = 0;
+int nLightSensor_ = 0;
+int nTemperatureSensor_ = 0;
+int nFlameSensor_ = 0;
+int nSoundSensor_ = 0;
+int nTiltSensor_ = 0;
+int nVibrationSensor_ = 0;
+
+int nFrontIRSensor_ = 0;
+int nRearIRSensor_ = 0;
+
+
 
 void setup()
 {
+        pinMode(BUZZER_PIN, OUTPUT); 
+        
+        pinMode(TILT_SENSOR_PIN, INPUT); 
+        
+        pinMode(VIBRATION_SENSOR_PIN, INPUT); 
+        
 	int i;
 	for(i=5;i<=8;i++)
 	{
@@ -49,17 +77,17 @@ boolean isDangerousFrontSensorValue(int n)
 
 void readRearIRSensor()
 {
-        int nRearSensorValue;
-	nRearSensorValue = analogRead(REAR_IR_SENSOR_PIN);
+	nRearIRSensor_ = analogRead(REAR_IR_SENSOR_PIN);
 	if (DEBUG_DUMP) Serial.print(" RearIR:");
-	if (DEBUG_DUMP) Serial.print(nRearSensorValue);
-	bSafeToReverse_ = ! isDangerousRearSensorValue(nRearSensorValue);
+	if (DEBUG_DUMP) Serial.print(nRearIRSensor_);
+	bSafeToReverse_ = ! isDangerousRearSensorValue(nRearIRSensor_);
 	if (nMovementState_ != STOPPED && nMovementState_ != MOVING_FORWARD)
 	{
 		if (! bSafeToReverse_)
 		{
 			if (DEBUG_DUMP) Serial.print(" EMERGENCY STOP ");
 			stop();
+                        alert();
 		}
 	}
 }
@@ -67,10 +95,10 @@ void readRearIRSensor()
 
 void readFrontIRSensor()
 {
-	int nFrontSensorValue = analogRead(FRONT_IR_SENSOR_PIN);
+	nFrontIRSensor_ = analogRead(FRONT_IR_SENSOR_PIN);
 	if (DEBUG_DUMP) Serial.print(" FrontIR:");
-	if (DEBUG_DUMP) Serial.print(nFrontSensorValue);
-	bSafeToGoForward_ = ! isDangerousFrontSensorValue(nFrontSensorValue);
+	if (DEBUG_DUMP) Serial.print(nFrontIRSensor_);
+	bSafeToGoForward_ = ! isDangerousFrontSensorValue(nFrontIRSensor_);
 
 	if (nMovementState_ != STOPPED && nMovementState_ != REVERSING)
 	{
@@ -78,6 +106,7 @@ void readFrontIRSensor()
 		{
 			if (DEBUG_DUMP) Serial.print(" EMERGENCY STOP ");
 			stop();
+                        alert();
 		}
 	}
 }
@@ -142,6 +171,16 @@ void right (char a,char b)
 }
 
 
+void servoleft()
+{
+    digitalWrite(8,1);
+}
+
+void servoright()
+{
+    digitalWrite(8,254);
+}
+
 void obtainCommandInput()
 {
 	if (DEBUG_DUMP) Serial.print(" ReadingCommands ");
@@ -157,6 +196,8 @@ void obtainCommandInput()
 		if (DEBUG_DUMP) Serial.print(val);
 		if (DEBUG_DUMP) Serial.print(" ");
 
+                click(); 
+
 		switch (val) // Perform an action depending on the command
 		{
 			case 'w'://Move Forward
@@ -171,6 +212,14 @@ void obtainCommandInput()
 			case 'd'://Turn Right
 				right (leftspeed,rightspeed);
 				break;
+			case 'p'://Turn Right
+				servoright ();
+				break;
+
+			case 'o'://Turn Right
+				servoleft ();
+				break;
+
 			default:
 				stop();
 			break;
@@ -180,12 +229,85 @@ void obtainCommandInput()
 }
 
 
+
+
+void click()                     
+{
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(1);
+    digitalWrite(BUZZER_PIN, LOW); 
+}
+
+
+void alert()                     
+{
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(10);
+    digitalWrite(BUZZER_PIN, LOW); 
+    delay(10);
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(10);
+    digitalWrite(BUZZER_PIN, LOW); 
+    delay(10);    
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(10);
+    digitalWrite(BUZZER_PIN, LOW); 
+}
+
+
+void reportSensors()
+{
+    if (nIterationsSinceLastPost_ > 5)
+    {
+        nIterationsSinceLastPost_ = 0;
+        
+        nLightSensor_ = analogRead(A0);
+        nTemperatureSensor_ = analogRead(A1);
+        nFlameSensor_ = analogRead(FLAME_SENSOR_PIN);      
+        nSoundSensor_ = analogRead(SOUND_SENSOR_PIN);      
+      
+        nTiltSensor_ = digitalRead(TILT_SENSOR_PIN);
+        nVibrationSensor_ = digitalRead(VIBRATION_SENSOR_PIN);
+        
+        Serial.println();
+        Serial.print("sensor light ");
+        Serial.println(nLightSensor_);
+        
+        Serial.print("sensor temperature ");
+        Serial.println(nTemperatureSensor_);
+
+        Serial.print("sensor sound ");
+        Serial.println(nSoundSensor_);
+
+
+        Serial.print("sensor flame ");
+        Serial.println(nFlameSensor_);    
+
+        Serial.print("sensor tilt ");
+        Serial.println(nTiltSensor_); 
+    
+        Serial.print("sensor vibration ");
+        Serial.println(nVibrationSensor_);     
+    
+        Serial.print("sensor front_ir ");
+        Serial.println(nFrontIRSensor_);     
+    
+        Serial.print("sensor rear_ir ");
+        Serial.println(nRearIRSensor_);     
+    }
+    else
+    {
+        ++nIterationsSinceLastPost_;
+    }
+}
+
+
 void loop()
 {
 	readFrontIRSensor();
 	readRearIRSensor();
 	obtainCommandInput();
+        reportSensors();
 	delay(100);
-	Serial.println();
 }
 

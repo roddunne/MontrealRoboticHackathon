@@ -32,8 +32,10 @@ end
 
 -- Process a line with no newlines
 local function process_line(line)
-	local token, name, value = line:match('(%w+) (%w+) (%w+)')
+	--print(line)
+	local token, name, value = line:match('(%w+) ([%w_]+) (%w+)')
 	if token == 'sensor' then
+		--print(name, value)
 		sensors[name] = value
 	end
 end
